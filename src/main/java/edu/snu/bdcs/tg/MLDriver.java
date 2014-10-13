@@ -65,7 +65,7 @@ public class MLDriver {
   private final AtomicInteger lineCnt = new AtomicInteger();
   private final AtomicInteger completedDataTasks = new AtomicInteger();
   private final AtomicInteger numberOfAllocatedEvaluators;
-  private final AtomicBoolean controllerSubmitted = new AtomicBoolean(false);
+  private final AtomicBoolean aggregatorSubmitted = new AtomicBoolean(false);
 
   private final int numOfComputeTasks;
   
@@ -94,17 +94,17 @@ public class MLDriver {
     this.allCommGroup
     .addBroadcast(SyncMessageBroadcaster.class,
         BroadcastOperatorSpec.newBuilder()
-            .setSenderId(MLControllerTask.TASK_ID)
+            .setSenderId(MLAggregateTask.TASK_ID)
             .setDataCodecClass(SerializableCodec.class)
             .build())
     .addBroadcast(ParameterVectorBroadcaster.class,
         BroadcastOperatorSpec.newBuilder()
-            .setSenderId(MLControllerTask.TASK_ID)
+            .setSenderId(MLAggregateTask.TASK_ID)
             .setDataCodecClass(SerializableCodec.class)
             .build())
     .addReduce(ParameterVectorReducer.class,
         ReduceOperatorSpec.newBuilder()
-            .setReceiverId(MLControllerTask.TASK_ID)
+            .setReceiverId(MLAggregateTask.TASK_ID)
             .setDataCodecClass(SerializableCodec.class)
             .setReduceFunctionClass(ParameterVectorReduceFunction.class)
             .build())
@@ -133,20 +133,20 @@ public class MLDriver {
 
       } else if (groupCommDriver.isConfigured(activeContext)) {
         
-        if (activeContext.getId().equals(groupCommConfiguredMasterId) && !controllerTaskSubmitted()) {
+        if (activeContext.getId().equals(groupCommConfiguredMasterId) && !aggregatorTaskSubmitted()) {
 
           final Configuration partialTaskConf = Tang.Factory.getTang()
               .newConfigurationBuilder(
                   TaskConfiguration.CONF
-                      .set(TaskConfiguration.IDENTIFIER, MLControllerTask.TASK_ID)
-                      .set(TaskConfiguration.TASK, MLControllerTask.class)
+                      .set(TaskConfiguration.IDENTIFIER, MLAggregateTask.TASK_ID)
+                      .set(TaskConfiguration.TASK, MLAggregateTask.class)
                       .build())
               .build();
 
           allCommGroup.addTask(partialTaskConf);
 
           final Configuration taskConf = groupCommDriver.getTaskConfiguration(partialTaskConf);
-          LOG.log(Level.FINER, "Submit ControllerTask conf: {0}", confSerializer.toString(taskConf));
+          LOG.log(Level.FINER, "Submit aggregatorTask conf: {0}", confSerializer.toString(taskConf));
 
           activeContext.submitTask(taskConf);
 
@@ -169,7 +169,7 @@ public class MLDriver {
         }
         
       } else {
-        // submit controller context and service
+        // submit aggregator context and service
         final Configuration contextConf = groupCommDriver.getContextConfiguration();
         final String groupCommContextId = contextId(contextConf);
 
@@ -178,7 +178,7 @@ public class MLDriver {
         }
 
         final Configuration serviceConf = groupCommDriver.getServiceConfiguration();
-        LOG.log(Level.FINER, "Submit GC controller conf: {0}", confSerializer.toString(contextConf));
+        LOG.log(Level.FINER, "Submit GC aggregator conf: {0}", confSerializer.toString(contextConf));
         LOG.log(Level.FINER, "Submit Service conf: {0}", confSerializer.toString(serviceConf));
 
         activeContext.submitContextAndService(contextConf, serviceConf);
@@ -199,8 +199,8 @@ public class MLDriver {
     return "MLComputeTask-" + computeIds.getAndIncrement();
   }
   
-  private boolean controllerTaskSubmitted() {
-    return !controllerSubmitted.compareAndSet(false, true);
+  private boolean aggregatorTaskSubmitted() {
+    return !aggregatorSubmitted.compareAndSet(false, true);
   }
 
   public class TaskCompletedHandler implements EventHandler<CompletedTask> {

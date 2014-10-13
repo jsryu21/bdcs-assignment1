@@ -14,16 +14,16 @@ import edu.snu.bdcs.tg.groupcomm.operatornames.ParameterVectorBroadcaster;
 import edu.snu.bdcs.tg.groupcomm.operatornames.ParameterVectorReducer;
 import edu.snu.bdcs.tg.groupcomm.operatornames.SyncMessageBroadcaster;
 
-public class MLControllerTask implements Task {
+public class MLAggregateTask implements Task {
 
-  public static final String TASK_ID = "MLControllerTask";
+  public static final String TASK_ID = "MLAggregateTask";
   private CommunicationGroupClient communicationGroupClient;
   private Broadcast.Sender<SyncMessage> syncMessageBroadcaster;
   private Broadcast.Sender<Object> paramBroadcaster;
   private Reduce.Receiver<Boolean> paramReducer;
   
   @Inject
-  public MLControllerTask(final GroupCommClient groupCommClient) {
+  public MLAggregateTask(final GroupCommClient groupCommClient) {
     
     this.communicationGroupClient = groupCommClient.getCommunicationGroup(AllCommunicationGroup.class);
     this.syncMessageBroadcaster = communicationGroupClient.getBroadcastSender(SyncMessageBroadcaster.class);
