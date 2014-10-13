@@ -2,13 +2,13 @@ package edu.snu.bdcs.tg;
 
 import javax.inject.Inject;
 
-import com.microsoft.reef.examples.nggroup.bgd.parameters.AllCommunicationGroup;
 import com.microsoft.reef.io.network.group.operators.Broadcast;
 import com.microsoft.reef.io.network.group.operators.Reduce;
 import com.microsoft.reef.io.network.nggroup.api.task.CommunicationGroupClient;
 import com.microsoft.reef.io.network.nggroup.api.task.GroupCommClient;
 import com.microsoft.reef.task.Task;
 
+import edu.snu.bdcs.tg.MLDriver.AllCommunicationGroup;
 import edu.snu.bdcs.tg.groupcomm.SyncMessage;
 import edu.snu.bdcs.tg.groupcomm.operatornames.ParameterVectorBroadcaster;
 import edu.snu.bdcs.tg.groupcomm.operatornames.ParameterVectorReducer;

@@ -126,7 +126,7 @@ public class MLDriver {
 
         final Configuration contextConf = groupCommDriver.getContextConfiguration();
         final Configuration serviceConf = groupCommDriver.getServiceConfiguration();
-        LOG.log(Level.FINER, "Submit GCContext conf: {0}", confSerializer.toString(contextConf));
+        LOG.log(Level.FINER, "Submit GC compute conf: {0}", confSerializer.toString(contextConf));
         LOG.log(Level.FINER, "Submit Service conf: {0}", confSerializer.toString(serviceConf));
 
         activeContext.submitContextAndService(contextConf, serviceConf);
@@ -178,7 +178,7 @@ public class MLDriver {
         }
 
         final Configuration serviceConf = groupCommDriver.getServiceConfiguration();
-        LOG.log(Level.FINER, "Submit GCContext conf: {0}", confSerializer.toString(contextConf));
+        LOG.log(Level.FINER, "Submit GC controller conf: {0}", confSerializer.toString(contextConf));
         LOG.log(Level.FINER, "Submit Service conf: {0}", confSerializer.toString(serviceConf));
 
         activeContext.submitContextAndService(contextConf, serviceConf);
@@ -206,7 +206,12 @@ public class MLDriver {
   public class TaskCompletedHandler implements EventHandler<CompletedTask> {
     @Override
     public void onNext(final CompletedTask completedTask) {
-
+      
+      final String taskId = completedTask.getId();
+      LOG.log(Level.FINEST, "Releasing Context: {0}", taskId);
+      completedTask.getActiveContext().close();
+      
+      /*
       final String taskId = completedTask.getId();
       LOG.log(Level.FINEST, "Completed Task: {0}", taskId);
 
@@ -222,6 +227,8 @@ public class MLDriver {
 
       LOG.log(Level.FINEST, "Releasing Context: {0}", taskId);
       completedTask.getActiveContext().close();
+      
+      */
     }
   }
 }
