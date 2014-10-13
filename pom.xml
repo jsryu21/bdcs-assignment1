@@ -30,7 +30,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <hadoop.version>2.4.0</hadoop.version>
-        <reef.version>0.8</reef.version>
+        <reef.version>0.9-SNAPSHOT</reef.version>
 
         <!-- shortcut to turn logging to INFO is to set this to " " -->
         <logging>-Djava.util.logging.config.class=com.microsoft.reef.util.logging.Config</logging>
@@ -136,6 +136,12 @@
             <version>${reef.version}</version>
         </dependency>
         
+        <dependency>
+            <groupId>com.microsoft.reef</groupId>
+            <artifactId>shimoga</artifactId>
+            <version>0.1-SNAPSHOT</version>
+        </dependency>
+
         <dependency>
             <groupId>com.microsoft.tang</groupId>
             <artifactId>tang</artifactId>

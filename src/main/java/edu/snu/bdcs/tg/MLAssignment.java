@@ -11,6 +11,7 @@ import com.microsoft.reef.client.DriverLauncher;
 import com.microsoft.reef.client.LauncherStatus;
 import com.microsoft.reef.driver.evaluator.EvaluatorRequest;
 import com.microsoft.reef.io.data.loading.api.DataLoadingRequestBuilder;
+import com.microsoft.reef.io.network.nggroup.impl.driver.GroupCommService;
 import com.microsoft.reef.runtime.local.client.LocalRuntimeConfiguration;
 import com.microsoft.reef.runtime.yarn.client.YarnClientConfiguration;
 import com.microsoft.reef.util.EnvironmentUtils;
@@ -55,25 +56,46 @@ public class MLAssignment {
   public static final class InputDir implements Name<String> {
   }
 
-  public static void main(final String[] args)
-      throws InjectionException, BindException, IOException {
+  private static Configuration getCommandLineConf(String[] args) throws BindException, IOException {
 
     final Tang tang = Tang.Factory.getTang();
-
     final JavaConfigurationBuilder cb = tang.newConfigurationBuilder();
 
-    new CommandLine(cb)
-        .registerShortNameOfClass(Local.class)
-        .registerShortNameOfClass(TimeOut.class)
-        .registerShortNameOfClass(MLAssignment.InputDir.class)
-        .processCommandLine(args);
+    CommandLine cl = new CommandLine(cb)
+    .registerShortNameOfClass(Local.class)
+    .registerShortNameOfClass(TimeOut.class)
+    .registerShortNameOfClass(MLAssignment.InputDir.class)
+    .processCommandLine(args);
 
-    final Injector injector = tang.newInjector(cb.build());
+    return cl.getBuilder().build();
+  }
 
-    final boolean isLocal = injector.getNamedInstance(Local.class);
-    final int jobTimeout = injector.getNamedInstance(TimeOut.class) * 60 * 1000;
-    final String inputDir = injector.getNamedInstance(MLAssignment.InputDir.class);
+  private static Configuration getDataLoadingConf(String inputDir) {
 
+    // This request is for controller task.
+    final EvaluatorRequest computeRequest = EvaluatorRequest.newBuilder()
+        .setNumber(NUM_COMPUTE_EVALUATORS)
+        .setMemory(MEM_COMPUTE_EVALUATORS)
+        .build();
+
+    // DataLoading request
+    final Configuration dataLoadConfiguration = new DataLoadingRequestBuilder()
+    .setMemoryMB(MEM_DATALOADING_EVALUATORS)
+    .setInputFormatClass(TextInputFormat.class)
+    .setInputPath(inputDir)
+    .setNumberOfDesiredSplits(NUM_SPLITS)
+    .setComputeRequest(computeRequest)
+    .setDriverConfigurationModule(DriverConfiguration.CONF
+        .set(DriverConfiguration.GLOBAL_LIBRARIES, EnvironmentUtils.getClassLocation(MLDriver.class))
+        .set(DriverConfiguration.ON_CONTEXT_ACTIVE, MLDriver.ContextActiveHandler.class)
+        .set(DriverConfiguration.ON_TASK_COMPLETED, MLDriver.TaskCompletedHandler.class)
+        .set(DriverConfiguration.DRIVER_IDENTIFIER, "MLAssignment"))
+        .build();
+
+    return dataLoadConfiguration;
+  }
+
+  private static Configuration getRuntimeConfiguration(boolean isLocal) {
     final Configuration runtimeConfiguration;
     if (isLocal) {
       LOG.log(Level.INFO, "Running MLAssignment on the local runtime");
@@ -85,27 +107,34 @@ public class MLAssignment {
       runtimeConfiguration = YarnClientConfiguration.CONF.build();
     }
 
-    // This request is for controller task.
-    final EvaluatorRequest computeRequest = EvaluatorRequest.newBuilder()
-        .setNumber(NUM_COMPUTE_EVALUATORS)
-        .setMemory(MEM_COMPUTE_EVALUATORS)
-        .build();
+    return runtimeConfiguration;
+  }
 
-    final Configuration dataLoadConfiguration = new DataLoadingRequestBuilder()
-        .setMemoryMB(MEM_DATALOADING_EVALUATORS)
-        .setInputFormatClass(TextInputFormat.class)
-        .setInputPath(inputDir)
-        .setNumberOfDesiredSplits(NUM_SPLITS)
-        .setComputeRequest(computeRequest)
-        .setDriverConfigurationModule(DriverConfiguration.CONF
-            .set(DriverConfiguration.GLOBAL_LIBRARIES, EnvironmentUtils.getClassLocation(MLDriver.class))
-            .set(DriverConfiguration.ON_CONTEXT_ACTIVE, MLDriver.ContextActiveHandler.class)
-            .set(DriverConfiguration.ON_TASK_COMPLETED, MLDriver.TaskCompletedHandler.class)
-            .set(DriverConfiguration.DRIVER_IDENTIFIER, "MLAssignment"))
+  public static void main(final String[] args)
+      throws InjectionException, BindException, IOException {
+
+    Configuration commandConf = getCommandLineConf(args);
+
+    final Tang tang = Tang.Factory.getTang();
+    final Injector injector = tang.newInjector(commandConf);
+
+    final boolean isLocal = injector.getNamedInstance(Local.class);
+    final int jobTimeout = injector.getNamedInstance(TimeOut.class) * 60 * 1000;
+    final String inputDir = injector.getNamedInstance(MLAssignment.InputDir.class);
+
+
+    final Configuration runtimeConfiguration = getRuntimeConfiguration(isLocal);
+    final Configuration dataLoadingConfiguration = getDataLoadingConf(inputDir);
+    final Configuration groupCommServConfiguration = GroupCommService.getConfiguration();
+
+    final Configuration mergedConf = Tang.Factory.getTang().newConfigurationBuilder(
+        commandConf, 
+        dataLoadingConfiguration,
+        groupCommServConfiguration)
         .build();
 
     final LauncherStatus state =
-        DriverLauncher.getLauncher(runtimeConfiguration).run(dataLoadConfiguration, jobTimeout);
+        DriverLauncher.getLauncher(runtimeConfiguration).run(mergedConf, jobTimeout);
 
     LOG.log(Level.INFO, "REEF job completed: {0}", state);
   }

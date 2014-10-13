@@ -14,30 +14,30 @@ import edu.snu.bdcs.tg.groupcomm.operatornames.ParameterVectorBroadcaster;
 import edu.snu.bdcs.tg.groupcomm.operatornames.ParameterVectorReducer;
 import edu.snu.bdcs.tg.groupcomm.operatornames.SyncMessageBroadcaster;
 
-public class MLComputeTask implements Task {
+public class MLAggregateTask implements Task {
 
-
+  public static final String TASK_ID = "MLAggregateTask";
   private CommunicationGroupClient communicationGroupClient;
-  private Broadcast.Receiver<SyncMessage> syncMessageBroadcaster;
-  private Broadcast.Receiver<Object> paramBroadcaster;
-  private Reduce.Sender<Boolean> paramReducer;
-
-  @Inject
-  public MLComputeTask(final GroupCommClient groupCommClient) {
-    this.communicationGroupClient = groupCommClient.getCommunicationGroup(AllCommunicationGroup.class);
-    this.syncMessageBroadcaster = communicationGroupClient.getBroadcastReceiver(SyncMessageBroadcaster.class);
-    this.paramBroadcaster = communicationGroupClient.getBroadcastReceiver(ParameterVectorBroadcaster.class);
-    this.paramReducer = communicationGroupClient.getReduceSender(ParameterVectorReducer.class);
-  }
+  private Broadcast.Sender<SyncMessage> syncMessageBroadcaster;
+  private Broadcast.Sender<Object> paramBroadcaster;
+  private Reduce.Receiver<Boolean> paramReducer;
   
+  @Inject
+  public MLAggregateTask(final GroupCommClient groupCommClient) {
+    
+    this.communicationGroupClient = groupCommClient.getCommunicationGroup(AllCommunicationGroup.class);
+    this.syncMessageBroadcaster = communicationGroupClient.getBroadcastSender(SyncMessageBroadcaster.class);
+    this.paramBroadcaster = communicationGroupClient.getBroadcastSender(ParameterVectorBroadcaster.class);
+    this.paramReducer = communicationGroupClient.getReduceReceiver(ParameterVectorReducer.class);
+  }
+
   @Override
   public byte[] call(byte[] arg0) throws Exception {
-    // TODO
     
-    SyncMessage message = syncMessageBroadcaster.receive();
-    
-    System.out.println("ComputeTask receives start message: " + message);
+    syncMessageBroadcaster.send(SyncMessage.Start);
+    System.out.println("ControllerTask sends start message");
     return null;
   }
-
+  
+  
 }
