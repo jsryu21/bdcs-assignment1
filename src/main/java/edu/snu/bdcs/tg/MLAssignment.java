@@ -42,20 +42,41 @@ public class MLAssignment {
   /**
    * Command line parameter = true to run locally, or false to run on YARN.
    */
-  @NamedParameter(doc = "Whether or not to run on the local runtime",
-      short_name = "local", default_value = "true")
+  @NamedParameter(doc = "Whether or not to run on the local runtime", short_name = "local", default_value = "true")
   public static final class Local implements Name<Boolean> {
+    
   }
 
-  @NamedParameter(doc = "Number of minutes before timeout",
-      short_name = "timeout", default_value = "2")
+  @NamedParameter(doc = "Number of minutes before timeout", short_name = "timeout", default_value = "10")
   public static final class TimeOut implements Name<Integer> {
+    
   }
 
   @NamedParameter(short_name = "input")
   public static final class InputDir implements Name<String> {
+    
   }
+  
+  @NamedParameter(short_name = "num_features", default_value = "3")
+  public static final class NumFeatures implements Name<Integer> {
 
+  }
+  
+  @NamedParameter(short_name = "learning_rate", default_value = "0.01")
+  public static final class LearningRate implements Name<Double> {
+
+  }
+  
+  @NamedParameter(short_name = "lambda", default_value = "0.001")
+  public static final class Lambda implements Name<Double> {
+
+  }
+  
+  @NamedParameter(short_name = "num_iterations", default_value = "3")
+  public static final class NumIterations implements Name<Integer> {
+
+  }
+  
   private static Configuration getCommandLineConf(String[] args) throws BindException, IOException {
 
     final Tang tang = Tang.Factory.getTang();
@@ -65,6 +86,10 @@ public class MLAssignment {
     .registerShortNameOfClass(Local.class)
     .registerShortNameOfClass(TimeOut.class)
     .registerShortNameOfClass(MLAssignment.InputDir.class)
+    .registerShortNameOfClass(NumFeatures.class)
+    .registerShortNameOfClass(LearningRate.class)
+    .registerShortNameOfClass(Lambda.class)
+    .registerShortNameOfClass(NumIterations.class)
     .processCommandLine(args);
 
     return cl.getBuilder().build();

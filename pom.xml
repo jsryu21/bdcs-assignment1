@@ -191,6 +191,13 @@
             <artifactId>hadoop-mapreduce-client-core</artifactId>
             <version>${hadoop.version}</version>
         </dependency>
+
+        <!-- Matrix computation -->
+        <dependency>
+          <groupId>com.googlecode.efficient-java-matrix-library</groupId>
+          <artifactId>core</artifactId>
+          <version>0.26</version>
+        </dependency>
     </dependencies>
 
 

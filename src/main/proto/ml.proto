@@ -1,0 +1,9 @@
+option java_package = "edu.snu.bdcs.tg.proto";
+option java_outer_classname = "MLProtoMessages";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
+
+message DoubleVector {
+  repeated double value = 1;
+}
+
