@@ -45,10 +45,13 @@ import com.microsoft.tang.exceptions.InjectionException;
 import com.microsoft.tang.formats.ConfigurationSerializer;
 import com.microsoft.wake.EventHandler;
 
+import edu.snu.bdcs.tg.MLAssignment.Lambda;
 import edu.snu.bdcs.tg.MLAssignment.LearningRate;
 import edu.snu.bdcs.tg.MLAssignment.NumFeatures;
 import edu.snu.bdcs.tg.MLAssignment.NumIterations;
+import edu.snu.bdcs.tg.groupcomm.LossValueReduceFunction;
 import edu.snu.bdcs.tg.groupcomm.ParameterVectorReduceFunction;
+import edu.snu.bdcs.tg.groupcomm.operatornames.LossValueReducer;
 import edu.snu.bdcs.tg.groupcomm.operatornames.ParameterVectorBroadcaster;
 import edu.snu.bdcs.tg.groupcomm.operatornames.ParameterVectorReducer;
 import edu.snu.bdcs.tg.groupcomm.operatornames.SyncMessageBroadcaster;
@@ -84,6 +87,7 @@ public class MLDriver {
   private final int numFeatures;
   private final double learningRate;
   private final int iterations;
+  private final double lambda;
   
   @Inject
   public MLDriver(final DataLoadingService dataLoadingService, 
@@ -91,7 +95,8 @@ public class MLDriver {
       final ConfigurationSerializer confSerializer, 
       final @Parameter(NumFeatures.class) int numFeatures, 
       final @Parameter(LearningRate.class) double learningRate, 
-      final @Parameter(NumIterations.class) int iterations) {
+      final @Parameter(NumIterations.class) int iterations, 
+      final @Parameter(Lambda.class) double lambda) {
     
     this.dataLoadingService = dataLoadingService;
     this.numOfComputeTasks = dataLoadingService.getNumberOfPartitions();
@@ -101,6 +106,7 @@ public class MLDriver {
     this.numFeatures = numFeatures;
     this.learningRate = learningRate;
     this.iterations = iterations;
+    this.lambda = lambda;
 
     this.numberOfAllocatedEvaluators = new AtomicInteger(numOfComputeTasks + 1);
     this.allCommGroup = this.groupCommDriver.newCommunicationGroup(
@@ -122,6 +128,12 @@ public class MLDriver {
             .setReceiverId(MLAggregateTask.TASK_ID)
             .setDataCodecClass(SerializableCodec.class)
             .setReduceFunctionClass(ParameterVectorReduceFunction.class)
+            .build())
+    .addReduce(LossValueReducer.class,
+        ReduceOperatorSpec.newBuilder()
+            .setReceiverId(MLAggregateTask.TASK_ID)
+            .setDataCodecClass(SerializableCodec.class)
+            .setReduceFunctionClass(LossValueReduceFunction.class)
             .build())
     .finalise();
   }
@@ -178,6 +190,7 @@ public class MLDriver {
               .bindNamedParameter(NumFeatures.class, numFeatures+"")
               .bindNamedParameter(LearningRate.class, learningRate+"")
               .bindNamedParameter(NumIterations.class, iterations+"")
+              .bindNamedParameter(Lambda.class, lambda+"")
               .build();
 
           allCommGroup.addTask(partialTaskConf);

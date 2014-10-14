@@ -20,14 +20,17 @@ import com.microsoft.reef.io.network.util.Pair;
 import com.microsoft.reef.task.Task;
 import com.microsoft.tang.annotations.Parameter;
 
+import edu.snu.bdcs.tg.MLAssignment.Lambda;
 import edu.snu.bdcs.tg.MLAssignment.LearningRate;
 import edu.snu.bdcs.tg.MLAssignment.NumFeatures;
 import edu.snu.bdcs.tg.MLAssignment.NumIterations;
 import edu.snu.bdcs.tg.MLDriver.AllCommunicationGroup;
 import edu.snu.bdcs.tg.groupcomm.SyncMessage;
+import edu.snu.bdcs.tg.groupcomm.operatornames.LossValueReducer;
 import edu.snu.bdcs.tg.groupcomm.operatornames.ParameterVectorBroadcaster;
 import edu.snu.bdcs.tg.groupcomm.operatornames.ParameterVectorReducer;
 import edu.snu.bdcs.tg.groupcomm.operatornames.SyncMessageBroadcaster;
+import edu.snu.bdcs.tg.vector.MLPair;
 import edu.snu.bdcs.tg.vector.MLVector;
 
 public class MLComputeTask implements Task {
@@ -37,12 +40,15 @@ public class MLComputeTask implements Task {
   private final Broadcast.Receiver<SyncMessage> syncMessageBroadcaster;
   private final Broadcast.Receiver<MLVector> paramBroadcaster;
   private final Reduce.Sender<MLVector> paramReducer;
+  private final Reduce.Sender<Double> lossReducer;
+  
   private final DataSet<LongWritable, Text> dataSet;
   private final int numFeatures;
   private MLVector parameters;
   private final double learningRate;
   private final int iterations;
   private final String identifier;
+  private final double lambda;
   
   @Inject
   public MLComputeTask(final GroupCommClient groupCommClient,
@@ -50,17 +56,21 @@ public class MLComputeTask implements Task {
       final @Parameter(NumFeatures.class) int numFeatures, 
       final @Parameter(LearningRate.class) double learningRate, 
       final @Parameter(NumIterations.class) int iterations, 
-      final @Parameter(TaskConfigurationOptions.Identifier.class) String identifier) {
+      final @Parameter(TaskConfigurationOptions.Identifier.class) String identifier, 
+      final @Parameter(Lambda.class) double lambda) {
     
     this.communicationGroupClient = groupCommClient.getCommunicationGroup(AllCommunicationGroup.class);
     this.syncMessageBroadcaster = communicationGroupClient.getBroadcastReceiver(SyncMessageBroadcaster.class);
     this.paramBroadcaster = communicationGroupClient.getBroadcastReceiver(ParameterVectorBroadcaster.class);
     this.paramReducer = communicationGroupClient.getReduceSender(ParameterVectorReducer.class);
+    this.lossReducer = communicationGroupClient.getReduceSender(LossValueReducer.class);
     this.dataSet = dataSet;
     this.numFeatures = numFeatures;
     this.learningRate = learningRate;
     this.iterations = iterations;
     this.identifier = identifier;
+    this.lambda = lambda;
+    
   }
   
   @Override
@@ -90,13 +100,13 @@ public class MLComputeTask implements Task {
       // get averaged parameter values
       parameters = paramBroadcaster.receive();
 
-      System.out.println(identifier + " Iteration " + i + " start...");
-      for (final MLPair training : trainingList) {
-        parameters = updateParameters(parameters, training.vector, training.value, learningRate);
-      }
+      // calculate loss function 
+      double loss = MLFunction.getLoss(trainingList, parameters, lambda);
+      lossReducer.send(new Double(loss));
       
-      System.out.println(identifier + " Iteration " + i + " end...");
-      System.out.println("Sending parameter: " + parameters);
+      // gradient descent 
+      parameters = MLFunction.getSGD(trainingList, parameters, learningRate, lambda);
+      System.out.println("ComputeTask Sending parameter: " + parameters);
       paramReducer.send(parameters);
     }
 
@@ -117,27 +127,7 @@ public class MLComputeTask implements Task {
     return new MLVector(dArr);
   }
   
-  private MLVector updateParameters(MLVector parameters, MLVector xArr, int Y, double learningRate) throws Exception {
-    return parameters.add(gradientLossFunction(Y, xArr, parameters).scale(-learningRate));
-  }
+
   
-  private MLVector gradientLossFunction(int Y, MLVector X, MLVector params) throws Exception {
-    double Z = params.mult(X);
-    
-    if (Z >=1 || Z <= 1) {
-      return X.add(params);
-    } else {
-      return params;
-    }
-  }
-  
-  private class MLPair {
-    private final MLVector vector;
-    private final int value;
-    
-    public MLPair(MLVector vector, int value) {
-      this.vector = vector;
-      this.value = value;
-    }
-  }
+
 }

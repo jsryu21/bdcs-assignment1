@@ -67,6 +67,11 @@ public class MLAssignment {
 
   }
   
+  @NamedParameter(short_name = "lambda", default_value = "0.001")
+  public static final class Lambda implements Name<Double> {
+
+  }
+  
   @NamedParameter(short_name = "num_iterations", default_value = "3")
   public static final class NumIterations implements Name<Integer> {
 
@@ -83,6 +88,8 @@ public class MLAssignment {
     .registerShortNameOfClass(MLAssignment.InputDir.class)
     .registerShortNameOfClass(NumFeatures.class)
     .registerShortNameOfClass(LearningRate.class)
+    .registerShortNameOfClass(Lambda.class)
+    .registerShortNameOfClass(NumIterations.class)
     .processCommandLine(args);
 
     return cl.getBuilder().build();
