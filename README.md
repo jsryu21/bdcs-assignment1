@@ -21,9 +21,10 @@ BDCS assignment 1
 * You <b>must</b> use this dataset for input. 
 
 ## How to run? 
+* Add the input file to hdfs 
 * mvn clean install 
 * ./start.sh $parameters$ 
-* Ex) ./start.sh --input=/test.txt --learning_rate=0.01
+* Ex) ./start.sh --input=$HDFS_INPUT_PATH$ --learning_rate=0.01
 
 
 ## Reference
