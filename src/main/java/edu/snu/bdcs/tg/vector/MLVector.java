@@ -43,6 +43,10 @@ public class MLVector implements Serializable {
     return new MLVector(c);
   }
   
+  public MLVector minus(MLVector vec) throws Exception {
+    return add(vec.scale(-1));
+  }
+  
   public MLVector scale(double a) {
     double[] c = new double[arr.length];
     
@@ -67,6 +71,7 @@ public class MLVector implements Serializable {
     
     return sum;
   }
+ 
   
   @Override
   public String toString() {
