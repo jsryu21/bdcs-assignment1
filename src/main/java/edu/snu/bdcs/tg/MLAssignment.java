@@ -72,7 +72,7 @@ public class MLAssignment {
 
   }
   
-  @NamedParameter(short_name = "num_iterations", default_value = "3")
+  @NamedParameter(short_name = "num_iterations", default_value = "10")
   public static final class NumIterations implements Name<Integer> {
 
   }
