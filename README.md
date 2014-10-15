@@ -19,6 +19,7 @@ BDCS assignment 1
 ## Dataset 
 * Skin segmentation (http://archive.ics.uci.edu/ml/datasets/Skin+Segmentation)
 * You <b>must</b> use this dataset for input. 
+* I already added the dataset to datset/Skin_NonSkin.txt 
 
 ## How to run? 
 * Add the input file to hdfs 
