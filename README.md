@@ -58,6 +58,11 @@ Iteration 10 loss: 6359.94
 ```
 The loss value decreases as it iterates the computation. 
 
+
+## How to implement 
+* https://github.com/taegeonum/bdcs-assignment1/pull/3
+* https://github.com/taegeonum/bdcs-assignment1/pull/2
+
 ## Reference
 * Parallelized SGD (http://cs.markusweimer.com/2010/12/09/parallelized-stochastic-gradient-descent/)
 * A Convenient Framework for Efﬁcient Parallel Multipass Algorithms (http://cs.markusweimer.com/2010/12/11/a-convenient-framework-for-ef%EF%AC%81cient-parallel-multipass-algorithms/)
