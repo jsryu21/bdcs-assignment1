@@ -1,7 +1,9 @@
 bdcs-assignment1
 ================
 
-BDCS assignment 1
+## BDCS assignment 1
+
+* Implement SGD && SVM for classification.
 
 ## Prerequisite
 * Install REEF 0.9-SNAPSHOT 
@@ -22,10 +24,10 @@ BDCS assignment 1
 * I already added the dataset to datset/Skin_NonSkin.txt 
 
 ## How to run? 
-* Add the input file to hdfs 
+* Add the input file to hdfs ( Ex. hdfs dfs -put dataset/Skin_NonSkin.txt / )
 * mvn clean install 
 * ./start.sh $parameters$ 
-* Ex) ./start.sh --input=$HDFS_INPUT_PATH$ --learning_rate=0.01
+* Ex) ./start.sh --input=$HDFS_INPUT_PATH$
 * You can see the result from your console. 
 ```
 ================== Result ===============
