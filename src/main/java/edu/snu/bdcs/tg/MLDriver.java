@@ -243,25 +243,6 @@ public class MLDriver {
       final String taskId = completedTask.getId();
       LOG.log(Level.FINEST, "Releasing Context: {0}", taskId);
       completedTask.getActiveContext().close();
-      
-      /*
-      final String taskId = completedTask.getId();
-      LOG.log(Level.FINEST, "Completed Task: {0}", taskId);
-
-      final byte[] retBytes = completedTask.get();
-      final String retStr = retBytes == null ? "No RetVal": new String(retBytes);
-      LOG.log(Level.FINE, "Line count from {0} : {1}", new String[] { taskId, retStr });
-
-      lineCnt.addAndGet(Integer.parseInt(retStr));
-
-      if (completedDataTasks.decrementAndGet() <= 0) {
-        LOG.log(Level.INFO, "Total line count: {0}", lineCnt.get());
-      }
-
-      LOG.log(Level.FINEST, "Releasing Context: {0}", taskId);
-      completedTask.getActiveContext().close();
-      
-      */
     }
   }
 }
