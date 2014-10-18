@@ -24,6 +24,7 @@ import java.util.logging.Logger;
 import javax.inject.Inject;
 
 import com.microsoft.reef.annotations.audience.DriverSide;
+import com.microsoft.reef.driver.client.JobMessageObserver;
 import com.microsoft.reef.driver.context.ActiveContext;
 import com.microsoft.reef.driver.task.CompletedTask;
 import com.microsoft.reef.driver.task.TaskConfiguration;
@@ -45,16 +46,15 @@ import com.microsoft.tang.exceptions.InjectionException;
 import com.microsoft.tang.formats.ConfigurationSerializer;
 import com.microsoft.wake.EventHandler;
 
-import edu.snu.bdcs.tg.MLAssignment.Lambda;
-import edu.snu.bdcs.tg.MLAssignment.LearningRate;
-import edu.snu.bdcs.tg.MLAssignment.NumFeatures;
-import edu.snu.bdcs.tg.MLAssignment.NumIterations;
+import edu.snu.bdcs.tg.MLLauncher.Lambda;
+import edu.snu.bdcs.tg.MLLauncher.LearningRate;
+import edu.snu.bdcs.tg.MLLauncher.NumFeatures;
+import edu.snu.bdcs.tg.MLLauncher.NumIterations;
 import edu.snu.bdcs.tg.groupcomm.LossValueReduceFunction;
 import edu.snu.bdcs.tg.groupcomm.ParameterVectorReduceFunction;
 import edu.snu.bdcs.tg.groupcomm.operatornames.LossValueReducer;
 import edu.snu.bdcs.tg.groupcomm.operatornames.ParameterVectorBroadcaster;
 import edu.snu.bdcs.tg.groupcomm.operatornames.ParameterVectorReducer;
-import edu.snu.bdcs.tg.groupcomm.operatornames.SyncMessageBroadcaster;
 
 /**
  * Driver side for the line counting demo that uses the data loading service.
@@ -83,6 +83,11 @@ public class MLDriver {
   
   private String groupCommConfiguredMasterId;
 
+  /**
+   * Job observer on the client.
+   * We use it to send results from the driver back to the client.
+   */
+  private final JobMessageObserver jobMessageObserver;
 
   private final int numFeatures;
   private final double learningRate;
@@ -93,6 +98,7 @@ public class MLDriver {
   public MLDriver(final DataLoadingService dataLoadingService, 
       final GroupCommDriver groupCommDriver, 
       final ConfigurationSerializer confSerializer, 
+      final JobMessageObserver jobMessageObserver,
       final @Parameter(NumFeatures.class) int numFeatures, 
       final @Parameter(LearningRate.class) double learningRate, 
       final @Parameter(NumIterations.class) int iterations, 
@@ -102,6 +108,8 @@ public class MLDriver {
     this.numOfComputeTasks = dataLoadingService.getNumberOfPartitions();
     this.completedDataTasks.set(numOfComputeTasks);
     this.groupCommDriver = groupCommDriver;
+    this.jobMessageObserver = jobMessageObserver;
+    
     this.confSerializer = confSerializer;
     this.numFeatures = numFeatures;
     this.learningRate = learningRate;
@@ -113,11 +121,6 @@ public class MLDriver {
         AllCommunicationGroup.class, numOfComputeTasks + 1);
     
     this.allCommGroup
-    .addBroadcast(SyncMessageBroadcaster.class,
-        BroadcastOperatorSpec.newBuilder()
-            .setSenderId(MLAggregateTask.TASK_ID)
-            .setDataCodecClass(SerializableCodec.class)
-            .build())
     .addBroadcast(ParameterVectorBroadcaster.class,
         BroadcastOperatorSpec.newBuilder()
             .setSenderId(MLAggregateTask.TASK_ID)
@@ -242,6 +245,12 @@ public class MLDriver {
       
       final String taskId = completedTask.getId();
       LOG.log(Level.FINEST, "Releasing Context: {0}", taskId);
+      
+      if (completedTask.getActiveContext().getId().equals(groupCommConfiguredMasterId)) {
+        // Send message to client 
+        LOG.log(Level.FINEST, "Get Byte");
+        jobMessageObserver.sendMessageToClient(completedTask.get());
+      }
       completedTask.getActiveContext().close();
     }
   }

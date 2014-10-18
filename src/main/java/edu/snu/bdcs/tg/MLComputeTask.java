@@ -20,16 +20,14 @@ import com.microsoft.reef.io.network.util.Pair;
 import com.microsoft.reef.task.Task;
 import com.microsoft.tang.annotations.Parameter;
 
-import edu.snu.bdcs.tg.MLAssignment.Lambda;
-import edu.snu.bdcs.tg.MLAssignment.LearningRate;
-import edu.snu.bdcs.tg.MLAssignment.NumFeatures;
-import edu.snu.bdcs.tg.MLAssignment.NumIterations;
+import edu.snu.bdcs.tg.MLLauncher.Lambda;
+import edu.snu.bdcs.tg.MLLauncher.LearningRate;
+import edu.snu.bdcs.tg.MLLauncher.NumFeatures;
+import edu.snu.bdcs.tg.MLLauncher.NumIterations;
 import edu.snu.bdcs.tg.MLDriver.AllCommunicationGroup;
-import edu.snu.bdcs.tg.groupcomm.SyncMessage;
 import edu.snu.bdcs.tg.groupcomm.operatornames.LossValueReducer;
 import edu.snu.bdcs.tg.groupcomm.operatornames.ParameterVectorBroadcaster;
 import edu.snu.bdcs.tg.groupcomm.operatornames.ParameterVectorReducer;
-import edu.snu.bdcs.tg.groupcomm.operatornames.SyncMessageBroadcaster;
 import edu.snu.bdcs.tg.vector.MLPair;
 import edu.snu.bdcs.tg.vector.MLVector;
 
@@ -37,7 +35,6 @@ public class MLComputeTask implements Task {
 
 
   private final CommunicationGroupClient communicationGroupClient;
-  private final Broadcast.Receiver<SyncMessage> syncMessageBroadcaster;
   private final Broadcast.Receiver<MLVector> paramBroadcaster;
   private final Reduce.Sender<MLVector> paramReducer;
   private final Reduce.Sender<Double> lossReducer;
@@ -60,7 +57,6 @@ public class MLComputeTask implements Task {
       final @Parameter(Lambda.class) double lambda) {
     
     this.communicationGroupClient = groupCommClient.getCommunicationGroup(AllCommunicationGroup.class);
-    this.syncMessageBroadcaster = communicationGroupClient.getBroadcastReceiver(SyncMessageBroadcaster.class);
     this.paramBroadcaster = communicationGroupClient.getBroadcastReceiver(ParameterVectorBroadcaster.class);
     this.paramReducer = communicationGroupClient.getReduceSender(ParameterVectorReducer.class);
     this.lossReducer = communicationGroupClient.getReduceSender(LossValueReducer.class);
@@ -76,9 +72,6 @@ public class MLComputeTask implements Task {
   @Override
   public byte[] call(byte[] arg0) throws Exception {
     
-    //SyncMessage message = syncMessageBroadcaster.receive();
-    //System.out.println("ComputeTask receives start message: " + message);
-    
     List<MLPair> trainingList = new ArrayList<>(100);
 
     for (final Pair<LongWritable, Text> keyValue : dataSet) {
@@ -87,7 +80,7 @@ public class MLComputeTask implements Task {
       String[] splited = value.split("\t");
 
       MLVector xArr = getFeatureVector(splited);
-      int Y = Integer.valueOf(splited[splited.length - 1]).intValue();
+      int Y = Integer.valueOf(splited[splited.length - 1]).intValue() - 1;
       trainingList.add(new MLPair(xArr, Y));
     }
 
@@ -110,6 +103,10 @@ public class MLComputeTask implements Task {
       paramReducer.send(parameters);
     }
 
+    // calculate last loss function 
+    double loss = MLFunction.getLoss(trainingList, parameters, lambda);
+    lossReducer.send(new Double(loss));
+    
     return null;
   }
   
